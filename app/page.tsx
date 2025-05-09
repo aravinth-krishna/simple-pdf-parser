@@ -3,11 +3,20 @@
 import { useState } from "react";
 import styles from "./page.module.css";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
+import Groq from "groq-sdk";
 
 export default function Home() {
   const [pdfText, setPdfText] = useState("");
   const [status, setStatus] = useState("");
   const [fileName, setFileName] = useState("");
+  const [summary, setSummary] = useState("");
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
+
+  const groq = new Groq({
+    apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
+    dangerouslyAllowBrowser: true,
+  });
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,6 +58,42 @@ export default function Home() {
           .join(" ") + "\n";
     }
     return text;
+  };
+
+  const generateSummary = async () => {
+    if (!pdfText) return;
+
+    setIsSummarizing(true);
+    setSummaryError("");
+
+    try {
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a PDF summarization expert. Provide a clear, concise summary of this document. Keep it under 150 words.",
+          },
+          {
+            role: "user",
+            content: `Summarize this PDF content: ${pdfText.substring(
+              0,
+              3000
+            )}`, // Limit input size
+          },
+        ],
+        model: "llama3-70b-8192",
+      });
+
+      setSummary(
+        chatCompletion.choices[0]?.message?.content || "No summary generated"
+      );
+    } catch (error) {
+      console.error("Summary error:", error);
+      setSummaryError("Failed to generate summary. Please try again.");
+    } finally {
+      setIsSummarizing(false);
+    }
   };
 
   return (
@@ -107,14 +152,54 @@ export default function Home() {
         <div className={styles.resultSection}>
           <div className={styles.resultHeader}>
             <h2>Extracted Text</h2>
-            <button
-              onClick={() => navigator.clipboard.writeText(pdfText)}
-              className={styles.copyButton}
-            >
-              Copy
-            </button>
+            <div className={styles.buttonGroup}>
+              <button
+                onClick={() => navigator.clipboard.writeText(pdfText)}
+                className={styles.copyButton}
+              >
+                Copy
+              </button>
+              <button
+                onClick={generateSummary}
+                className={styles.summaryButton}
+                disabled={isSummarizing}
+              >
+                {isSummarizing ? "Summarizing..." : "Generate Summary"}
+              </button>
+            </div>
           </div>
           <pre className={styles.textOutput}>{pdfText}</pre>
+
+          {isSummarizing && (
+            <div className={styles.processing}>
+              <div className={styles.spinner}></div>
+              <p>Generating summary...</p>
+            </div>
+          )}
+
+          {summaryError && (
+            <div className={styles.errorMessage}>
+              <svg viewBox="0 0 24 24" className={styles.errorIcon}>
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+              </svg>
+              {summaryError}
+            </div>
+          )}
+
+          {summary && (
+            <div className={styles.summarySection}>
+              <div className={styles.resultHeader}>
+                <h2>AI Summary</h2>
+                <button
+                  onClick={() => navigator.clipboard.writeText(summary)}
+                  className={styles.copyButton}
+                >
+                  Copy
+                </button>
+              </div>
+              <div className={styles.summaryText}>{summary}</div>
+            </div>
+          )}
         </div>
       )}
     </div>

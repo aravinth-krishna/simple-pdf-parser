@@ -176,3 +176,43 @@
     font-size: 2rem;
   }
 }
+
+/* Add to existing CSS */
+.buttonGroup {
+  display: flex;
+  gap: 1rem;
+}
+
+.summaryButton {
+  background: #9f7aea;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.summaryButton:hover:not(:disabled) {
+  background: #805ad5;
+}
+
+.summaryButton:disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+}
+
+.summarySection {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.summaryText {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
